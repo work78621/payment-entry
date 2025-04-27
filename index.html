@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Entry Form</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
+    input, select { margin: 5px; padding: 5px; }
+    button { margin-top: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+
+  <h2>Payment Entry</h2>
+  <form id="entryForm">
+    <label>Date: <input type="date" id="date" required></label><br>
+    <label>Ins#: <input type="text" id="ins"></label><br>
+    <label>Identifier: <input type="text" id="identifier"></label><br>
+    <label>Transaction: <input type="text" id="transaction"></label><br>
+
+    <label>Currency:
+      <select id="currency" required>
+        <option value="PKR">PKR</option>
+        <option value="AED">AED</option>
+      </select>
+    </label><br>
+
+    <label>Amount: <input type="number" id="amount" required></label><br>
+
+    <label>Bank:
+      <select id="bank" required>
+        <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
+        <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
+        <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
+        <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+        <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
+        <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
+        <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
+        <option value="PAK - Cash Received">PAK - Cash Received</option>
+        <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
+        <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+        <option value="DXB - Cash Received">DXB - Cash Received</option>
+        <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
+      </select>
+    </label><br>
+
+    <label>From: <input type="text" id="from"></label><br>
+    <label>Remarks: <input type="text" id="remarks"></label><br>
+
+    <button type="button" onclick="addEntry()">Save Entry</button>
+    <button type="button" onclick="exportToExcel()">Export to Excel</button>
+    <button type="button" onclick="clearAll()">Clear All Data</button>
+  </form>
+
+  <h3>Saved Entries</h3>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>DATE</th><th>Ins#</th><th>Identifier</th><th>Transaction</th><th>CURRENCY</th>
+        <th>AMOUNT</th><th>BANK</th><th>From</th><th>Other Remarks</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let data = [];
+
+    // Load saved data
+    window.onload = function() {
+      const storedData = localStorage.getItem("paymentData");
+      if (storedData) {
+        data = JSON.parse(storedData);
+        updateTable();
+      }
+    };
+
+    function addEntry() {
+      const row = {
+        DATE: document.getElementById('date').value,
+        INS: document.getElementById('ins').value,
+        IDENTIFIER: document.getElementById('identifier').value,
+        TRANSACTION: document.getElementById('transaction').value,
+        CURRENCY: document.getElementById('currency').value,
+        AMOUNT: parseFloat(document.getElementById('amount').value),
+        BANK: document.getElementById('bank').value,
+        FROM: document.getElementById('from').value,
+        REMARKS: document.getElementById('remarks').value
+      };
+
+      data.push(row);
+      localStorage.setItem("paymentData", JSON.stringify(data));
+      updateTable();
+      document.getElementById("entryForm").reset();
+    }
+
+    function updateTable() {
+      const table = document.querySelector("#dataTable tbody");
+      table.innerHTML = "";
+      data.forEach(entry => {
+        const row = table.insertRow();
+        row.innerHTML = `
+          <td>${entry.DATE}</td><td>${entry.INS}</td><td>${entry.IDENTIFIER}</td>
+          <td>${entry.TRANSACTION}</td><td>${entry.CURRENCY}</td><td>${entry.AMOUNT}</td>
+          <td>${entry.BANK}</td><td>${entry.FROM}</td><td>${entry.REMARKS}</td>
+        `;
+      });
+    }
+
+    function exportToExcel() {
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Payments");
+      XLSX.writeFile(workbook, "Payments.xlsx");
+    }
+
+    function clearAll() {
+      if (confirm("Are you sure you want to clear all saved data?")) {
+        localStorage.removeItem("paymentData");
+        data = [];
+        updateTable();
+      }
+    }
+  </script>
+
+</body>
+</html>
