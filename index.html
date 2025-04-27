@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry Form with OCR and Manual Text</title>
+  <title>Payment Entry Form (Google Sheet Connected)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
@@ -52,9 +52,7 @@
     <label>From: <input type="text" id="from"></label><br>
     <label>Remarks: <input type="text" id="remarks"></label><br>
 
-    <button type="button" onclick="addEntry()">Save Entry</button>
-    <button type="button" onclick="exportToExcel()">Export to Excel</button>
-    <button type="button" onclick="clearAll()">Clear All Data</button>
+    <button type="button" onclick="addEntry()">Save Entry to Google Sheet</button>
   </form>
 
   <h3>Upload Transaction Image (Auto-Read)</h3>
@@ -81,59 +79,46 @@
     let data = [];
     let extractedText = "";
 
-    window.onload = function() {
-      const storedData = localStorage.getItem("paymentData");
-      if (storedData) {
-        data = JSON.parse(storedData);
-        updateTable();
-      }
-    };
-
     function addEntry() {
       const row = {
-        DATE: document.getElementById('date').value,
-        INS: document.getElementById('ins').value,
-        IDENTIFIER: document.getElementById('identifier').value,
-        TRANSACTION: document.getElementById('transaction').value,
-        CURRENCY: document.getElementById('currency').value,
-        AMOUNT: parseFloat(document.getElementById('amount').value),
-        BANK: document.getElementById('bank').value,
-        FROM: document.getElementById('from').value,
-        REMARKS: document.getElementById('remarks').value
+        date: document.getElementById('date').value,
+        ins: document.getElementById('ins').value,
+        identifier: document.getElementById('identifier').value,
+        transaction: document.getElementById('transaction').value,
+        currency: document.getElementById('currency').value,
+        amount: parseFloat(document.getElementById('amount').value),
+        bank: document.getElementById('bank').value,
+        from: document.getElementById('from').value,
+        remarks: document.getElementById('remarks').value
       };
 
-      data.push(row);
-      localStorage.setItem("paymentData", JSON.stringify(data));
-      updateTable();
-      document.getElementById("entryForm").reset();
-    }
-
-    function updateTable() {
-      const table = document.querySelector("#dataTable tbody");
-      table.innerHTML = "";
-      data.forEach(entry => {
-        const row = table.insertRow();
-        row.innerHTML = `
-          <td>${entry.DATE}</td><td>${entry.INS}</td><td>${entry.IDENTIFIER}</td>
-          <td>${entry.TRANSACTION}</td><td>${entry.CURRENCY}</td><td>${entry.AMOUNT}</td>
-          <td>${entry.BANK}</td><td>${entry.FROM}</td><td>${entry.REMARKS}</td>
-        `;
+      fetch('https://script.google.com/macros/s/AKfycbygInhj9xPuOQVCp2LhXYme9Fd399n6ZQDAZrPONz8Wk-r8RUYsXwwu1_km0_ufekDTzw/exec', {
+        method: 'POST',
+        body: JSON.stringify(row)
+      })
+      .then(response => {
+        if (response.ok) {
+          alert("✅ Data Saved Successfully to Google Sheets!");
+          document.getElementById("entryForm").reset();
+          updateTable(row);
+        } else {
+          alert("❌ Failed to save data! Please try again.");
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert("❌ Error saving data. Please check your internet or script deployment.");
       });
     }
 
-    function exportToExcel() {
-      const worksheet = XLSX.utils.json_to_sheet(data);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Payments");
-      XLSX.writeFile(workbook, "Payments.xlsx");
-    }
-
-    function clearAll() {
-      if (confirm("Are you sure you want to clear all saved data?")) {
-        localStorage.removeItem("paymentData");
-        data = [];
-        updateTable();
-      }
+    function updateTable(row) {
+      const table = document.querySelector("#dataTable tbody");
+      const newRow = table.insertRow();
+      newRow.innerHTML = `
+          <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
+          <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
+          <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
+        `;
     }
 
     function readImage() {
@@ -193,8 +178,6 @@
             document.getElementById('from').value = fromText.trim();
           }
         }
-
-        // Expand more mapping if needed
       });
 
       alert("Auto-fill attempted based on detected text. Please double-check!");
