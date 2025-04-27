@@ -2,18 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry Form</title>
+  <title>Payment Entry Form with OCR and Manual Text</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
     table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
-    input, select { margin: 5px; padding: 5px; }
+    input, select, textarea { margin: 5px; padding: 5px; }
     button { margin-top: 10px; padding: 10px 20px; }
+    #ocrText { margin-top: 10px; font-size: 14px; color: green; white-space: pre-line; }
   </style>
 </head>
 <body>
 
   <h2>Payment Entry</h2>
+
   <form id="entryForm">
     <label>Date: <input type="date" id="date" required></label><br>
     <label>Ins#: <input type="text" id="ins"></label><br>
@@ -54,6 +57,15 @@
     <button type="button" onclick="clearAll()">Clear All Data</button>
   </form>
 
+  <h3>Upload Transaction Image (Auto-Read)</h3>
+  <input type="file" id="fileInput" accept="image/*" onchange="readImage()" />
+  <div id="ocrText"></div>
+  <button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
+
+  <h3>Or Paste Transaction Text</h3>
+  <textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
+  <button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
+
   <h3>Saved Entries</h3>
   <table id="dataTable">
     <thead>
@@ -67,8 +79,8 @@
 
   <script>
     let data = [];
+    let extractedText = "";
 
-    // Load saved data
     window.onload = function() {
       const storedData = localStorage.getItem("paymentData");
       if (storedData) {
@@ -122,6 +134,79 @@
         data = [];
         updateTable();
       }
+    }
+
+    function readImage() {
+      const file = document.getElementById('fileInput').files[0];
+      if (file) {
+        Tesseract.recognize(
+          file,
+          'eng',
+          { logger: m => console.log(m) }
+        ).then(({ data: { text } }) => {
+          extractedText = text;
+          document.getElementById('ocrText').textContent = extractedText;
+        });
+      }
+    }
+
+    function mapTextToForm(sourceText = extractedText) {
+      if (!sourceText) {
+        alert("No text detected!");
+        return;
+      }
+
+      const lines = sourceText.split("\n");
+      lines.forEach(line => {
+        line = line.trim();
+
+        if (line.match(/date/i)) {
+          const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
+          if (dateMatch) {
+            const parts = dateMatch[0].split(/[\/\-.]/);
+            let formattedDate = "";
+            if (parts[2].length === 4) { 
+              formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            }
+            document.getElementById('date').value = formattedDate;
+          }
+        }
+
+        if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
+          const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
+          if (amtMatch) {
+            document.getElementById('amount').value = amtMatch[0];
+          }
+        }
+
+        if (line.match(/pkr/i)) {
+          document.getElementById('currency').value = "PKR";
+        }
+
+        if (line.match(/aed/i)) {
+          document.getElementById('currency').value = "AED";
+        }
+
+        if (line.toLowerCase().includes("from")) {
+          const fromText = line.split(":")[1] || line.split(" ")[1];
+          if (fromText) {
+            document.getElementById('from').value = fromText.trim();
+          }
+        }
+
+        // Expand more mapping if needed
+      });
+
+      alert("Auto-fill attempted based on detected text. Please double-check!");
+    }
+
+    function mapManualTextToForm() {
+      const manualText = document.getElementById('manualText').value;
+      if (!manualText) {
+        alert("Please paste some text first!");
+        return;
+      }
+      mapTextToForm(manualText);
     }
   </script>
 
