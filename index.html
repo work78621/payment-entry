@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry Form (Google Sheet Connected)</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <title>Payment Entry (Google Drive + Sheet)</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
-    input, select, textarea { margin: 5px; padding: 5px; }
-    button { margin-top: 10px; padding: 10px 20px; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+    input, select, textarea { margin: 5px; padding: 8px; width: 90%; }
+    button { margin: 10px 5px; padding: 10px 20px; }
     #ocrText { margin-top: 10px; font-size: 14px; color: green; white-space: pre-line; }
+    #liveTable { margin-top: 30px; width: 100%; }
   </style>
 </head>
 <body>
 
-  <h2>Payment Entry</h2>
+  <h2>Payment Entry Form</h2>
 
   <form id="entryForm">
     <label>Date: <input type="date" id="date" required></label><br>
@@ -52,6 +52,8 @@
     <label>From: <input type="text" id="from"></label><br>
     <label>Remarks: <input type="text" id="remarks"></label><br>
 
+    <label>Receipt Image: <input type="file" id="imageUpload" accept="image/*" required></label><br>
+
     <button type="button" onclick="addEntry()">Save Entry to Google Sheet</button>
   </form>
 
@@ -61,64 +63,60 @@
   <button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
 
   <h3>Or Paste Transaction Text</h3>
-  <textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
+  <textarea id="manualText" rows="8" placeholder="Paste receipt text here..."></textarea><br>
   <button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
 
-  <h3>Saved Entries</h3>
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>DATE</th><th>Ins#</th><th>Identifier</th><th>Transaction</th><th>CURRENCY</th>
-        <th>AMOUNT</th><th>BANK</th><th>From</th><th>Other Remarks</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h2>Saved Entries (Live from Google Sheet)</h2>
+  <div id="liveTable"></div>
 
   <script>
-    let data = [];
     let extractedText = "";
 
     function addEntry() {
-      const row = {
-        date: document.getElementById('date').value,
-        ins: document.getElementById('ins').value,
-        identifier: document.getElementById('identifier').value,
-        transaction: document.getElementById('transaction').value,
-        currency: document.getElementById('currency').value,
-        amount: parseFloat(document.getElementById('amount').value),
-        bank: document.getElementById('bank').value,
-        from: document.getElementById('from').value,
-        remarks: document.getElementById('remarks').value
+      const imageFile = document.getElementById('imageUpload').files[0];
+      if (!imageFile) {
+        alert('Please upload an image!');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const base64String = event.target.result.split(',')[1];
+
+        const row = {
+          date: document.getElementById('date').value,
+          ins: document.getElementById('ins').value,
+          identifier: document.getElementById('identifier').value,
+          transaction: document.getElementById('transaction').value,
+          currency: document.getElementById('currency').value,
+          amount: parseFloat(document.getElementById('amount').value),
+          bank: document.getElementById('bank').value,
+          from: document.getElementById('from').value,
+          remarks: document.getElementById('remarks').value,
+          imageName: imageFile.name,
+          imageType: imageFile.type,
+          imageBase64: base64String
+        };
+
+        fetch('https://script.google.com/macros/s/AKfycbygInhj9xPuOQVCp2LhXYme9Fd399n6ZQDAZrPONz8Wk-r8RUYsXwwu1_km0_ufekDTzw/exec', {
+          method: 'POST',
+          body: JSON.stringify(row)
+        })
+        .then(response => {
+          if (response.ok) {
+            alert("✅ Data + Image Saved Successfully!");
+            document.getElementById("entryForm").reset();
+            setTimeout(fetchSheetData, 1000); // Refresh table after 1 second
+          } else {
+            alert("❌ Failed to save! Try again.");
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert("❌ Error saving data.");
+        });
       };
-
-      fetch('https://script.google.com/macros/s/AKfycbygInhj9xPuOQVCp2LhXYme9Fd399n6ZQDAZrPONz8Wk-r8RUYsXwwu1_km0_ufekDTzw/exec', {
-        method: 'POST',
-        body: JSON.stringify(row)
-      })
-      .then(response => {
-        if (response.ok) {
-          alert("✅ Data Saved Successfully to Google Sheets!");
-          document.getElementById("entryForm").reset();
-          updateTable(row);
-        } else {
-          alert("❌ Failed to save data! Please try again.");
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert("❌ Error saving data. Please check your internet or script deployment.");
-      });
-    }
-
-    function updateTable(row) {
-      const table = document.querySelector("#dataTable tbody");
-      const newRow = table.insertRow();
-      newRow.innerHTML = `
-          <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
-          <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
-          <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
-        `;
+      reader.readAsDataURL(imageFile);
     }
 
     function readImage() {
@@ -144,43 +142,28 @@
       const lines = sourceText.split("\n");
       lines.forEach(line => {
         line = line.trim();
-
         if (line.match(/date/i)) {
           const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
           if (dateMatch) {
             const parts = dateMatch[0].split(/[\/\-.]/);
-            let formattedDate = "";
-            if (parts[2].length === 4) { 
-              formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-            }
+            let formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
             document.getElementById('date').value = formattedDate;
           }
         }
-
         if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
           const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
           if (amtMatch) {
             document.getElementById('amount').value = amtMatch[0];
           }
         }
-
-        if (line.match(/pkr/i)) {
-          document.getElementById('currency').value = "PKR";
-        }
-
-        if (line.match(/aed/i)) {
-          document.getElementById('currency').value = "AED";
-        }
-
+        if (line.match(/pkr/i)) document.getElementById('currency').value = "PKR";
+        if (line.match(/aed/i)) document.getElementById('currency').value = "AED";
         if (line.toLowerCase().includes("from")) {
           const fromText = line.split(":")[1] || line.split(" ")[1];
-          if (fromText) {
-            document.getElementById('from').value = fromText.trim();
-          }
+          if (fromText) document.getElementById('from').value = fromText.trim();
         }
       });
-
-      alert("Auto-fill attempted based on detected text. Please double-check!");
+      alert("Auto-filled based on detected text. Double check before saving!");
     }
 
     function mapManualTextToForm() {
@@ -191,6 +174,29 @@
       }
       mapTextToForm(manualText);
     }
+
+    function fetchSheetData() {
+      fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vTlw8qZi3uvvJOfOX-fXsA_vhVYv8NBxRVQqrMQp0sHAT-UVZMu4m90PkNdWJjD8lm3nANr2lMiSzRj/pub?output=csv')
+      .then(response => response.text())
+      .then(data => {
+        const rows = data.split("\n").map(row => row.split(","));
+        let html = "<table><tr>";
+        rows[0].forEach(header => { html += `<th>${header}</th>`; });
+        html += "</tr>";
+        rows.slice(1).forEach(row => {
+          html += "<tr>";
+          row.forEach(cell => { html += `<td>${cell}</td>`; });
+          html += "</tr>";
+        });
+        html += "</table>";
+        document.getElementById('liveTable').innerHTML = html;
+      })
+      .catch(error => {
+        console.error('Error fetching sheet data:', error);
+      });
+    }
+
+    window.onload = fetchSheetData;
   </script>
 
 </body>
