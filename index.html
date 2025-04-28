@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Entry Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f0f2f5; }
+    .box {
+      background: white; padding: 15px; margin-bottom: 15px; border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    h2, h3 { margin-top: 0; color: #333; font-size: 22px; }
+    label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; }
+    input, select, textarea {
+      width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc;
+      border-radius: 5px; font-size: 14px;
+    }
+    button {
+      width: 100%; background-color: #4CAF50; color: white; border: none;
+      margin-top: 15px; padding: 10px; font-size: 16px; border-radius: 5px; cursor: pointer;
+    }
+    button:hover { background-color: #45a049; }
+    #liveTable { overflow-x: auto; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: white; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #4CAF50; color: white; }
+    #ocrText { margin-top: 10px; font-size: 13px; color: green; white-space: pre-line; }
+    #searchInput, #fromDate, #toDate {
+      width: 32%; padding: 8px; margin: 8px 1%; font-size: 14px; border: 1px solid #ccc; border-radius: 5px;
+      display: inline-block;
+    }
+    .pagination {
+      margin-top: 15px; text-align: center;
+    }
+    .pagination button {
+      width: auto; margin: 0 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Payment Entry Form</h2>
+  <form id="entryForm">
+    <label>Date:</label>
+    <input type="date" id="date" required>
+
+    <label>Ins#:</label>
+    <input type="text" id="ins">
+
+    <label>Identifier:</label>
+    <input type="text" id="identifier">
+
+    <label>Transaction:</label>
+    <input type="text" id="transaction">
+
+    <label>Currency:</label>
+    <select id="currency" required>
+      <option value="PKR">PKR</option>
+      <option value="AED">AED</option>
+    </select>
+
+    <label>Amount:</label>
+    <input type="number" id="amount" required>
+
+    <label>Bank:</label>
+    <select id="bank" required>
+      <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
+      <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
+      <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
+      <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+      <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
+      <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
+      <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
+      <option value="PAK - Cash Received">PAK - Cash Received</option>
+      <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
+      <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+      <option value="DXB - Cash Received">DXB - Cash Received</option>
+      <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
+    </select>
+
+    <label>From:</label>
+    <input type="text" id="from">
+
+    <label>Remarks:</label>
+    <input type="text" id="remarks">
+
+    <label>Receipt Image (Optional):</label>
+    <input type="file" id="imageUpload" accept="image/*">
+
+    <button type="button" onclick="addEntry()">Save Entry</button>
+  </form>
+</div>
+
+<div class="box">
+  <h3>Upload Transaction Image (Auto-Read)</h3>
+  <input type="file" id="fileInput" accept="image/*" onchange="readImage()">
+  <div id="ocrText"></div>
+  <button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
+</div>
+
+<div class="box">
+  <h3>Or Paste Transaction Text</h3>
+  <textarea id="manualText" rows="6" placeholder="Paste receipt text here..."></textarea>
+  <button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Text)</button>
+</div>
+
+<div class="box">
+  <h2>Saved Entries (Live from Google Sheet)</h2>
+  <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search here...">
+  <input type="date" id="fromDate" onchange="filterTable()">
+  <input type="date" id="toDate" onchange="filterTable()">
+  <div id="liveTable"></div>
+  <button onclick="downloadExcel()">Download Table as Excel</button>
+  <div class="pagination">
+    <button onclick="prevPage()">Previous</button>
+    <button onclick="nextPage()">Next</button>
+  </div>
+</div>
+
+<script>
+// HERE NEXT WILL COME YOUR FULL JAVASCRIPT TO CONTROL:
+// - Save Entry
+// - OCR Auto Read
+// - Search, Date Filter
+// - Pagination
+// - Download Excel
+// - Live Fetch from Sheet
+// - Date format "DD MMM YYYY"
+// (I will send in next message immediately!)
+
+</script>
+
+</body>
+</html>
