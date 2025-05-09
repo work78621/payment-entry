@@ -2,103 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry (Simplified)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Entry Form (Google Sheet Connected)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 10px;
-      background-color: #f0f2f5;
-    }
-    .box {
-      background: white;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    h2 {
-      margin-top: 0;
-      color: #333;
-      font-size: 22px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-    button {
-      width: 100%;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      margin-top: 15px;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    #liveTable {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #4CAF50;
-      color: white;
-    }
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
+    input, select, textarea { margin: 5px; padding: 5px; }
+    button { margin-top: 10px; padding: 10px 20px; }
+    #ocrText { margin-top: 10px; font-size: 14px; color: green; white-space: pre-line; }
   </style>
 </head>
 <body>
 
-  <div class="box">
-    <h2>Payment Entry Form</h2>
-    <form id="entryForm">
-      <label>Date:</label>
-      <input type="date" id="date" required>
+  <h2>Payment Entry</h2>
 
-      <label>Ins#:</label>
-      <input type="text" id="ins">
+  <form id="entryForm">
+    <label>Date: <input type="date" id="date" required></label><br>
+    <label>Ins#: <input type="text" id="ins"></label><br>
+    <label>Identifier: <input type="text" id="identifier"></label><br>
+    <label>Transaction: <input type="text" id="transaction"></label><br>
 
-      <label>Identifier:</label>
-      <input type="text" id="identifier">
-
-      <label>Transaction:</label>
-      <input type="text" id="transaction">
-
-      <label>Currency:</label>
+    <label>Currency:
       <select id="currency" required>
         <option value="PKR">PKR</option>
         <option value="AED">AED</option>
       </select>
+    </label><br>
 
-      <label>Amount:</label>
-      <input type="number" id="amount" required>
+    <label>Amount: <input type="number" id="amount" required></label><br>
 
-      <label>Bank:</label>
+    <label>Bank:
       <select id="bank" required>
         <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
         <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
@@ -113,84 +47,151 @@
         <option value="DXB - Cash Received">DXB - Cash Received</option>
         <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
       </select>
+    </label><br>
 
-      <label>From:</label>
-      <input type="text" id="from">
+    <label>From: <input type="text" id="from"></label><br>
+    <label>Remarks: <input type="text" id="remarks"></label><br>
 
-      <label>Remarks:</label>
-      <input type="text" id="remarks">
+    <button type="button" onclick="addEntry()">Save Entry to Google Sheet</button>
+  </form>
 
-      <button type="button" onclick="addEntry()">Save Entry</button>
-    </form>
-  </div>
+  <h3>Upload Transaction Image (Auto-Read)</h3>
+  <input type="file" id="fileInput" accept="image/*" onchange="readImage()" />
+  <div id="ocrText"></div>
+  <button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
 
-  <div class="box">
-    <h2>Saved Entries (Live from Google Sheet)</h2>
-    <div id="liveTable"></div>
-  </div>
+  <h3>Or Paste Transaction Text</h3>
+  <textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
+  <button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
 
-<script>
-// Keep this formatDate() function
-function formatDate(inputDate) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const parts = inputDate.split("-");
-  if (parts.length !== 3) return inputDate;
-  const year = parts[0];
-  const month = months[parseInt(parts[1], 10) - 1];
-  const day = parts[2];
-  return `${day} ${month} ${year}`;
-}
+  <h3>Saved Entries</h3>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>DATE</th><th>Ins#</th><th>Identifier</th><th>Transaction</th><th>CURRENCY</th>
+        <th>AMOUNT</th><th>BANK</th><th>From</th><th>Other Remarks</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-// ADD this new helper:
-function cleanText(value) {
-  return value.replace(/["']/g, "").trim();
-}
+  <script>
+    let data = [];
+    let extractedText = "";
 
-// ✅ Replace your existing addEntry() with this version:
-function addEntry() {
-  const row = {
-    date: formatDate(document.getElementById('date').value),
-    ins: cleanText(document.getElementById('ins').value),
-    identifier: cleanText(document.getElementById('identifier').value),
-    transaction: cleanText(document.getElementById('transaction').value),
-    currency: document.getElementById('currency').value,
-    amount: parseFloat(document.getElementById('amount').value.replace(/[^0-9.]/g, '')),
-    bank: cleanText(document.getElementById('bank').value),
-    from: cleanText(document.getElementById('from').value),
-    remarks: cleanText(document.getElementById('remarks').value),
-    imageName: null,
-    imageType: null,
-    imageBase64: null
-  };
+    function addEntry() {
+      const row = {
+        date: document.getElementById('date').value,
+        ins: document.getElementById('ins').value,
+        identifier: document.getElementById('identifier').value,
+        transaction: document.getElementById('transaction').value,
+        currency: document.getElementById('currency').value,
+        amount: parseFloat(document.getElementById('amount').value),
+        bank: document.getElementById('bank').value,
+        from: document.getElementById('from').value,
+        remarks: document.getElementById('remarks').value
+      };
 
-  fetch('https://script.google.com/macros/s/AKfycbygInhj9xPuOQVCp2LhXYme9Fd399n6ZQDAZrPONz8Wk-r8RUYsXwwu1_km0_ufekDTzw/exec', {
-    method: 'POST',
-    body: JSON.stringify(row)
-  })
-  .then(response => {
-    if (response.ok) {
-      alert("✅ Data Saved Successfully!");
-      document.getElementById("entryForm").reset();
-      setTimeout(fetchSheetData, 1000);
-    } else {
-      alert("❌ Failed to save! Try again.");
+      fetch('https://script.google.com/macros/s/AKfycbx07Mrcgn8Wy69ii4OeNL09D8VbPiQcvBiDi9cj4nMtm9CZ8HraQzhGeNkZJyMCF1Ok8w/exec', {
+        method: 'POST',
+        body: JSON.stringify(row)
+      })
+      .then(response => {
+        if (response.ok) {
+          alert("✅ Data Saved Successfully to Google Sheets!");
+          document.getElementById("entryForm").reset();
+          updateTable(row);
+        } else {
+          alert("❌ Failed to save data! Please try again.");
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert("❌ Error saving data. Please check your internet or script deployment.");
+      });
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert("❌ Error saving data.");
-  });
-}
 
-// Keep fetchSheetData() as-is below
-function fetchSheetData() {
-  ...
-}
+    function updateTable(row) {
+      const table = document.querySelector("#dataTable tbody");
+      const newRow = table.insertRow();
+      newRow.innerHTML = `
+          <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
+          <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
+          <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
+        `;
+    }
 
-window.onload = fetchSheetData;
-</script>
+    function readImage() {
+      const file = document.getElementById('fileInput').files[0];
+      if (file) {
+        Tesseract.recognize(
+          file,
+          'eng',
+          { logger: m => console.log(m) }
+        ).then(({ data: { text } }) => {
+          extractedText = text;
+          document.getElementById('ocrText').textContent = extractedText;
+        });
+      }
+    }
 
+    function mapTextToForm(sourceText = extractedText) {
+      if (!sourceText) {
+        alert("No text detected!");
+        return;
+      }
+
+      const lines = sourceText.split("\n");
+      lines.forEach(line => {
+        line = line.trim();
+
+        if (line.match(/date/i)) {
+          const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
+          if (dateMatch) {
+            const parts = dateMatch[0].split(/[\/\-.]/);
+            let formattedDate = "";
+            if (parts[2].length === 4) { 
+              formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            }
+            document.getElementById('date').value = formattedDate;
+          }
+        }
+
+        if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
+          const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
+          if (amtMatch) {
+            document.getElementById('amount').value = amtMatch[0];
+          }
+        }
+
+        if (line.match(/pkr/i)) {
+          document.getElementById('currency').value = "PKR";
+        }
+
+        if (line.match(/aed/i)) {
+          document.getElementById('currency').value = "AED";
+        }
+
+        if (line.toLowerCase().includes("from")) {
+          const fromText = line.split(":")[1] || line.split(" ")[1];
+          if (fromText) {
+            document.getElementById('from').value = fromText.trim();
+          }
+        }
+      });
+
+      alert("Auto-fill attempted based on detected text. Please double-check!");
+    }
+
+    function mapManualTextToForm() {
+      const manualText = document.getElementById('manualText').value;
+      if (!manualText) {
+        alert("Please paste some text first!");
+        return;
+      }
+      mapTextToForm(manualText);
+    }
+  </script>
 
 </body>
 </html>
