@@ -1,183 +1,226 @@
+<!-- Professional Payment Entry UI with Full Google Sheets Sync -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <title>Payment Entry Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; background-color: #f0f2f5; }
-    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
-    input, select, textarea { margin: 5px; padding: 5px; width: 100%; }
-    button { margin-top: 10px; padding: 10px 20px; }
-    #ocrText { margin-top: 10px; font-size: 14px; color: green; white-space: pre-line; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f6f9;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    form label {
+      display: block;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px 0 0;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-primary { background: #007BFF; color: white; }
+    .btn-warning { background: #FFC107; color: white; }
+    .btn-danger { background: #DC3545; color: white; }
+    .btn-secondary { background: #6C757D; color: white; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f1f1f1;
+    }
+    .actions button {
+      margin-right: 5px;
+    }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h2>Payment Entry</h2>
+    <form id="entryForm">
+      <input type="hidden" id="entryId">
+      <label>Date: <input type="date" id="date" required></label>
+      <label>Ins#: <input type="text" id="ins"></label>
+      <label>Identifier: <input type="text" id="identifier"></label>
+      <label>Transaction: <input type="text" id="transaction"></label>
+      <label>Currency:
+        <select id="currency" required>
+          <option value="PKR">PKR</option>
+          <option value="AED">AED</option>
+        </select>
+      </label>
+      <label>Amount: <input type="number" id="amount" required></label>
+      <label>Bank:
+        <select id="bank" required>
+          <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
+          <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
+          <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
+          <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+          <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
+          <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
+          <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
+          <option value="PAK - Cash Received">PAK - Cash Received</option>
+          <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
+          <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+          <option value="DXB - Cash Received">DXB - Cash Received</option>
+          <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
+        </select>
+      </label>
+      <label>From: <input type="text" id="from"></label>
+      <label>Remarks: <input type="text" id="remarks"></label>
+      <div>
+        <button type="button" class="btn-primary" onclick="submitEntry()">Save</button>
+        <button type="button" class="btn-warning" onclick="updateEntry()" style="display:none">Update</button>
+        <button type="button" class="btn-secondary" onclick="resetForm()">Cancel</button>
+        <button type="button" class="btn-primary" onclick="exportToExcel()">Export to Excel</button>
+      </div>
+    </form>
 
-<h2>Payment Entry</h2>
-
-<form id="entryForm">
-  <label>Date: <input type="date" id="date" required></label><br>
-  <label>Ins#: <input type="text" id="ins"></label><br>
-  <label>Identifier: <input type="text" id="identifier"></label><br>
-  <label>Transaction: <input type="text" id="transaction"></label><br>
-  <label>Currency:
-    <select id="currency" required>
-      <option value="PKR">PKR</option>
-      <option value="AED">AED</option>
-    </select>
-  </label><br>
-  <label>Amount: <input type="number" id="amount" required></label><br>
-  <label>Bank:
-    <select id="bank" required>
-      <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
-      <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
-      <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
-      <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
-      <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
-      <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
-      <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
-      <option value="PAK - Cash Received">PAK - Cash Received</option>
-      <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
-      <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
-      <option value="DXB - Cash Received">DXB - Cash Received</option>
-      <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
-    </select>
-  </label><br>
-  <label>From: <input type="text" id="from"></label><br>
-  <label>Remarks: <input type="text" id="remarks"></label><br>
-
-  <button type="button" onclick="addEntry()">Save Entry to Google Sheet</button>
-</form>
-
-<h3>Upload Transaction Image (Auto-Read)</h3>
-<input type="file" id="fileInput" accept="image/*" onchange="readImage()" />
-<div id="ocrText"></div>
-<button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
-
-<h3>Or Paste Transaction Text</h3>
-<textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
-<button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
-
-<h3>Saved Entries</h3>
-<table id="dataTable">
-  <thead>
-    <tr>
-      <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
-      <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th><th>File URL</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
+          <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
 <script>
-const scriptURL = 'https://script.google.com/macros/s/AKfycbx07Mrcgn8Wy69ii4OeNL09D8VbPiQcvBiDi9cj4nMtm9CZ8HraQzhGeNkZJyMCF1Ok8w/exec'; // Replace with your deployed Web App URL
-let extractedText = "";
+const scriptURL = 'https://script.google.com/macros/s/AKfycbx07Mrcgn8Wy69ii4OeNL09D8VbPiQcvBiDi9cj4nMtm9CZ8HraQzhGeNkZJyMCF1Ok8w/exec';
 
-window.onload = function () {
+window.onload = () => {
   fetch(scriptURL)
     .then(res => res.json())
-    .then(data => data.forEach(updateTable))
-    .catch(err => console.error("Fetch error:", err));
+    .then(data => data.forEach(row => appendRow(row)))
+    .catch(err => console.error(err));
 };
 
-function addEntry() {
-  const row = {
+function submitEntry() {
+  const row = getFormData();
+  row.id = Date.now().toString();
+  fetch(scriptURL, {
+    method: 'POST',
+    body: JSON.stringify(row)
+  }).then(res => res.text()).then(() => {
+    appendRow(row);
+    resetForm();
+  });
+}
+
+function updateEntry() {
+  const row = getFormData();
+  fetch(scriptURL + '?id=' + row.id, {
+    method: 'PUT',
+    body: JSON.stringify(row)
+  }).then(res => res.text()).then(() => {
+    location.reload();
+  });
+}
+
+function deleteEntry(id) {
+  if (!confirm("Delete this entry?")) return;
+  fetch(scriptURL + '?id=' + id, { method: 'DELETE' })
+    .then(res => res.text())
+    .then(() => location.reload());
+}
+
+function appendRow(row) {
+  const table = document.querySelector("#dataTable tbody");
+  const newRow = table.insertRow();
+  newRow.innerHTML = `
+    <td>${row.date}</td>
+    <td>${row.ins}</td>
+    <td>${row.identifier}</td>
+    <td>${row.transaction}</td>
+    <td>${row.currency}</td>
+    <td>${row.amount}</td>
+    <td>${row.bank}</td>
+    <td>${row.from}</td>
+    <td>${row.remarks}</td>
+    <td class="actions">
+      <button class="btn-warning" onclick='loadEntry(${JSON.stringify(row)})'>Edit</button>
+      <button class="btn-danger" onclick='deleteEntry("${row.id}")'>Delete</button>
+    </td>`;
+}
+
+function loadEntry(row) {
+  document.getElementById('entryId').value = row.id;
+  document.getElementById('date').value = row.date;
+  document.getElementById('ins').value = row.ins;
+  document.getElementById('identifier').value = row.identifier;
+  document.getElementById('transaction').value = row.transaction;
+  document.getElementById('currency').value = row.currency;
+  document.getElementById('amount').value = row.amount;
+  document.getElementById('bank').value = row.bank;
+  document.getElementById('from').value = row.from;
+  document.getElementById('remarks').value = row.remarks;
+  document.querySelector(".btn-primary").style.display = "none";
+  document.querySelector(".btn-warning").style.display = "inline-block";
+}
+
+function resetForm() {
+  document.getElementById("entryForm").reset();
+  document.getElementById("entryId").value = "";
+  document.querySelector(".btn-primary").style.display = "inline-block";
+  document.querySelector(".btn-warning").style.display = "none";
+}
+
+function getFormData() {
+  return {
+    id: document.getElementById('entryId').value,
     date: document.getElementById('date').value,
     ins: document.getElementById('ins').value,
     identifier: document.getElementById('identifier').value,
     transaction: document.getElementById('transaction').value,
     currency: document.getElementById('currency').value,
-    amount: parseFloat(document.getElementById('amount').value),
+    amount: document.getElementById('amount').value,
     bank: document.getElementById('bank').value,
     from: document.getElementById('from').value,
     remarks: document.getElementById('remarks').value
   };
-
-  fetch(scriptURL, {
-    method: 'POST',
-    body: JSON.stringify(row)
-  })
-  .then(response => {
-    if (response.ok) {
-      alert("✅ Data Saved!");
-      updateTable(row);
-      document.getElementById("entryForm").reset();
-    } else {
-      alert("❌ Failed to save!");
-    }
-  })
-  .catch(err => alert("❌ Error saving data."));
 }
 
-function updateTable(row) {
-  const table = document.querySelector("#dataTable tbody");
-  const newRow = table.insertRow();
-  newRow.innerHTML = `
-    <td>${row["Date"] || row.date || ""}</td>
-    <td>${row["Ins#"] || row.ins || ""}</td>
-    <td>${row["Identifier"] || row.identifier || ""}</td>
-    <td>${row["Transaction"] || row.transaction || ""}</td>
-    <td>${row["Currency"] || row.currency || ""}</td>
-    <td>${row["Amount"] || row.amount || ""}</td>
-    <td>${row["Bank"] || row.bank || ""}</td>
-    <td>${row["From"] || row.from || ""}</td>
-    <td>${row["Remarks"] || row.remarks || ""}</td>
-    <td>${row["File URL"] ? `<a href="${row["File URL"]}" target="_blank">View</a>` : ''}</td>
-  `;
-}
-
-function readImage() {
-  const file = document.getElementById('fileInput').files[0];
-  if (file) {
-    Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
-      .then(({ data: { text } }) => {
-        extractedText = text;
-        document.getElementById('ocrText').textContent = extractedText;
-      });
-  }
-}
-
-function mapTextToForm(sourceText = extractedText) {
-  if (!sourceText) return alert("No text to parse.");
-
-  const lines = sourceText.split("\n");
-  lines.forEach(line => {
-    line = line.trim();
-
-    if (line.match(/date/i)) {
-      const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
-      if (dateMatch) {
-        const parts = dateMatch[0].split(/[\/\-.]/);
-        if (parts[2].length === 4) {
-          document.getElementById('date').value = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-      }
-    }
-
-    if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
-      const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
-      if (amtMatch) document.getElementById('amount').value = amtMatch[0];
-    }
-
-    if (line.match(/pkr/i)) document.getElementById('currency').value = "PKR";
-    if (line.match(/aed/i)) document.getElementById('currency').value = "AED";
-
-    if (line.toLowerCase().includes("from")) {
-      const fromText = line.split(":")[1] || line.split(" ")[1];
-      if (fromText) document.getElementById('from').value = fromText.trim();
-    }
-  });
-
-  alert("Auto-filled from OCR. Please verify.");
-}
-
-function mapManualTextToForm() {
-  const manualText = document.getElementById('manualText').value;
-  if (!manualText) return alert("Paste receipt text first.");
-  mapTextToForm(manualText);
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById("dataTable"));
+  XLSX.utils.book_append_sheet(wb, ws, "Payments");
+  XLSX.writeFile(wb, "payment_entries.xlsx");
 }
 </script>
-
 </body>
 </html>
