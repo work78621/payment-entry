@@ -6,9 +6,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; }
+    body { font-family: Arial; padding: 20px; background-color: #f0f2f5; }
     table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
-    input, select, textarea { margin: 5px; padding: 5px; }
+    input, select, textarea { margin: 5px; padding: 5px; width: 100%; }
     button { margin-top: 10px; padding: 10px 20px; }
     #ocrText { margin-top: 10px; font-size: 14px; color: green; white-space: pre-line; }
   </style>
@@ -22,16 +22,13 @@
     <label>Ins#: <input type="text" id="ins"></label><br>
     <label>Identifier: <input type="text" id="identifier"></label><br>
     <label>Transaction: <input type="text" id="transaction"></label><br>
-
     <label>Currency:
       <select id="currency" required>
         <option value="PKR">PKR</option>
         <option value="AED">AED</option>
       </select>
     </label><br>
-
     <label>Amount: <input type="number" id="amount" required></label><br>
-
     <label>Bank:
       <select id="bank" required>
         <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
@@ -48,7 +45,6 @@
         <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
       </select>
     </label><br>
-
     <label>From: <input type="text" id="from"></label><br>
     <label>Remarks: <input type="text" id="remarks"></label><br>
 
@@ -68,18 +64,23 @@
   <table id="dataTable">
     <thead>
       <tr>
-        <th>DATE</th><th>Ins#</th><th>Identifier</th><th>Transaction</th><th>CURRENCY</th>
-        <th>AMOUNT</th><th>BANK</th><th>From</th><th>Other Remarks</th>
+        <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
+        <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th><th>File URL</th>
       </tr>
     </thead>
     <tbody></tbody>
-    <button onclick="exportToExcel()">Export Table to Excel</button>
-
   </table>
 
   <script>
-    let data = [];
+    const scriptURL = 'https://script.google.com/macros/s/YOUR_SCRIPT_URL/exec'; // Replace with your actual Web App URL
     let extractedText = "";
+
+    window.onload = function () {
+      fetch(scriptURL)
+        .then(response => response.json())
+        .then(data => data.forEach(updateTable))
+        .catch(error => console.error("Fetch error:", error));
+    };
 
     function addEntry() {
       const row = {
@@ -94,22 +95,22 @@
         remarks: document.getElementById('remarks').value
       };
 
-      fetch('https://script.google.com/macros/s/AKfycbx07Mrcgn8Wy69ii4OeNL09D8VbPiQcvBiDi9cj4nMtm9CZ8HraQzhGeNkZJyMCF1Ok8w/exec', {
+      fetch(scriptURL, {
         method: 'POST',
         body: JSON.stringify(row)
       })
       .then(response => {
         if (response.ok) {
-          alert("✅ Data Saved Successfully to Google Sheets!");
-          document.getElementById("entryForm").reset();
+          alert("✅ Data Saved Successfully!");
           updateTable(row);
+          document.getElementById("entryForm").reset();
         } else {
-          alert("❌ Failed to save data! Please try again.");
+          alert("❌ Failed to save data.");
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert("❌ Error saving data. Please check your internet or script deployment.");
+        alert("❌ Error saving data.");
       });
     }
 
@@ -117,31 +118,25 @@
       const table = document.querySelector("#dataTable tbody");
       const newRow = table.insertRow();
       newRow.innerHTML = `
-          <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
-          <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
-          <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
-        `;
+        <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
+        <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
+        <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
+        <td>${row.fileUrl || ''}</td>`;
     }
 
     function readImage() {
       const file = document.getElementById('fileInput').files[0];
       if (file) {
-        Tesseract.recognize(
-          file,
-          'eng',
-          { logger: m => console.log(m) }
-        ).then(({ data: { text } }) => {
-          extractedText = text;
-          document.getElementById('ocrText').textContent = extractedText;
-        });
+        Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+          .then(({ data: { text } }) => {
+            extractedText = text;
+            document.getElementById('ocrText').textContent = extractedText;
+          });
       }
     }
 
     function mapTextToForm(sourceText = extractedText) {
-      if (!sourceText) {
-        alert("No text detected!");
-        return;
-      }
+      if (!sourceText) return alert("No OCR text detected.");
 
       const lines = sourceText.split("\n");
       lines.forEach(line => {
@@ -151,56 +146,35 @@
           const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
           if (dateMatch) {
             const parts = dateMatch[0].split(/[\/\-.]/);
-            let formattedDate = "";
-            if (parts[2].length === 4) { 
-              formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            if (parts[2].length === 4) {
+              document.getElementById('date').value =
+                `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
             }
-            document.getElementById('date').value = formattedDate;
           }
         }
 
         if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
           const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
-          if (amtMatch) {
-            document.getElementById('amount').value = amtMatch[0];
-          }
+          if (amtMatch) document.getElementById('amount').value = amtMatch[0];
         }
 
-        if (line.match(/pkr/i)) {
-          document.getElementById('currency').value = "PKR";
-        }
-
-        if (line.match(/aed/i)) {
-          document.getElementById('currency').value = "AED";
-        }
+        if (line.match(/pkr/i)) document.getElementById('currency').value = "PKR";
+        if (line.match(/aed/i)) document.getElementById('currency').value = "AED";
 
         if (line.toLowerCase().includes("from")) {
           const fromText = line.split(":")[1] || line.split(" ")[1];
-          if (fromText) {
-            document.getElementById('from').value = fromText.trim();
-          }
+          if (fromText) document.getElementById('from').value = fromText.trim();
         }
       });
 
-      alert("Auto-fill attempted based on detected text. Please double-check!");
+      alert("Auto-filled from image text. Please verify fields.");
     }
 
     function mapManualTextToForm() {
       const manualText = document.getElementById('manualText').value;
-      if (!manualText) {
-        alert("Please paste some text first!");
-        return;
-      }
+      if (!manualText) return alert("Please paste receipt text.");
       mapTextToForm(manualText);
     }
-function exportToExcel() {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(document.getElementById("dataTable"));
-  XLSX.utils.book_append_sheet(wb, ws, "Payments");
-  XLSX.writeFile(wb, "payment_entries.xlsx");
-}
-
-    
   </script>
 
 </body>
