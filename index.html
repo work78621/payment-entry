@@ -130,6 +130,7 @@
   </div>
 
 <script>
+// Keep this formatDate() function
 function formatDate(inputDate) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -141,17 +142,23 @@ function formatDate(inputDate) {
   return `${day} ${month} ${year}`;
 }
 
+// ADD this new helper:
+function cleanText(value) {
+  return value.replace(/["']/g, "").trim();
+}
+
+// ✅ Replace your existing addEntry() with this version:
 function addEntry() {
   const row = {
     date: formatDate(document.getElementById('date').value),
-    ins: document.getElementById('ins').value,
-    identifier: document.getElementById('identifier').value,
-    transaction: document.getElementById('transaction').value,
+    ins: cleanText(document.getElementById('ins').value),
+    identifier: cleanText(document.getElementById('identifier').value),
+    transaction: cleanText(document.getElementById('transaction').value),
     currency: document.getElementById('currency').value,
-    amount: parseFloat(document.getElementById('amount').value),
-    bank: document.getElementById('bank').value,
-    from: document.getElementById('from').value,
-    remarks: document.getElementById('remarks').value,
+    amount: parseFloat(document.getElementById('amount').value.replace(/[^0-9.]/g, '')),
+    bank: cleanText(document.getElementById('bank').value),
+    from: cleanText(document.getElementById('from').value),
+    remarks: cleanText(document.getElementById('remarks').value),
     imageName: null,
     imageType: null,
     imageBase64: null
@@ -176,29 +183,14 @@ function addEntry() {
   });
 }
 
+// Keep fetchSheetData() as-is below
 function fetchSheetData() {
-  fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vTlw8qZi3uvvJOfOX-fXsA_vhVYv8NBxRVQqrMQp0sHAT-UVZMu4m90PkNdWJjD8lm3nANr2lMiSzRj/pub?output=csv')
-  .then(response => response.text())
-  .then(data => {
-    const rows = data.split("\n").map(row => row.split(","));
-    let html = "<table><tr>";
-    rows[0].forEach(header => { html += `<th>${header}</th>`; });
-    html += "</tr>";
-    rows.slice(1).forEach(row => {
-      html += "<tr>";
-      row.forEach(cell => { html += `<td>${cell}</td>`; });
-      html += "</tr>";
-    });
-    html += "</table>";
-    document.getElementById('liveTable').innerHTML = html;
-  })
-  .catch(error => {
-    console.error('Error fetching sheet data:', error);
-  });
+  ...
 }
 
 window.onload = fetchSheetData;
 </script>
+
 
 </body>
 </html>
