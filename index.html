@@ -73,6 +73,8 @@
       </tr>
     </thead>
     <tbody></tbody>
+    <button onclick="exportToExcel()">Export Table to Excel</button>
+
   </table>
 
   <script>
@@ -191,6 +193,14 @@
       }
       mapTextToForm(manualText);
     }
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById("dataTable"));
+  XLSX.utils.book_append_sheet(wb, ws, "Payments");
+  XLSX.writeFile(wb, "payment_entries.xlsx");
+}
+
+    
   </script>
 
 </body>
