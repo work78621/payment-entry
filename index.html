@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry Form (Google Sheet Connected)</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <title>Payment Entry</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; background-color: #f0f2f5; }
@@ -15,167 +14,170 @@
 </head>
 <body>
 
-  <h2>Payment Entry</h2>
+<h2>Payment Entry</h2>
 
-  <form id="entryForm">
-    <label>Date: <input type="date" id="date" required></label><br>
-    <label>Ins#: <input type="text" id="ins"></label><br>
-    <label>Identifier: <input type="text" id="identifier"></label><br>
-    <label>Transaction: <input type="text" id="transaction"></label><br>
-    <label>Currency:
-      <select id="currency" required>
-        <option value="PKR">PKR</option>
-        <option value="AED">AED</option>
-      </select>
-    </label><br>
-    <label>Amount: <input type="number" id="amount" required></label><br>
-    <label>Bank:
-      <select id="bank" required>
-        <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
-        <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
-        <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
-        <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
-        <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
-        <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
-        <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
-        <option value="PAK - Cash Received">PAK - Cash Received</option>
-        <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
-        <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
-        <option value="DXB - Cash Received">DXB - Cash Received</option>
-        <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
-      </select>
-    </label><br>
-    <label>From: <input type="text" id="from"></label><br>
-    <label>Remarks: <input type="text" id="remarks"></label><br>
+<form id="entryForm">
+  <label>Date: <input type="date" id="date" required></label><br>
+  <label>Ins#: <input type="text" id="ins"></label><br>
+  <label>Identifier: <input type="text" id="identifier"></label><br>
+  <label>Transaction: <input type="text" id="transaction"></label><br>
+  <label>Currency:
+    <select id="currency" required>
+      <option value="PKR">PKR</option>
+      <option value="AED">AED</option>
+    </select>
+  </label><br>
+  <label>Amount: <input type="number" id="amount" required></label><br>
+  <label>Bank:
+    <select id="bank" required>
+      <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
+      <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
+      <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
+      <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+      <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
+      <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
+      <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
+      <option value="PAK - Cash Received">PAK - Cash Received</option>
+      <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
+      <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+      <option value="DXB - Cash Received">DXB - Cash Received</option>
+      <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
+    </select>
+  </label><br>
+  <label>From: <input type="text" id="from"></label><br>
+  <label>Remarks: <input type="text" id="remarks"></label><br>
 
-    <button type="button" onclick="addEntry()">Save Entry to Google Sheet</button>
-  </form>
+  <button type="button" onclick="addEntry()">Save Entry to Google Sheet</button>
+</form>
 
-  <h3>Upload Transaction Image (Auto-Read)</h3>
-  <input type="file" id="fileInput" accept="image/*" onchange="readImage()" />
-  <div id="ocrText"></div>
-  <button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
+<h3>Upload Transaction Image (Auto-Read)</h3>
+<input type="file" id="fileInput" accept="image/*" onchange="readImage()" />
+<div id="ocrText"></div>
+<button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
 
-  <h3>Or Paste Transaction Text</h3>
-  <textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
-  <button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
+<h3>Or Paste Transaction Text</h3>
+<textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
+<button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
 
-  <h3>Saved Entries</h3>
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
-        <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th><th>File URL</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<h3>Saved Entries</h3>
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
+      <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th><th>File URL</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
-  <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbx07Mrcgn8Wy69ii4OeNL09D8VbPiQcvBiDi9cj4nMtm9CZ8HraQzhGeNkZJyMCF1Ok8w/exec'; // Replace with your actual Web App URL
-    let extractedText = "";
+<script>
+const scriptURL = 'https://script.google.com/macros/s/AKfycbx07Mrcgn8Wy69ii4OeNL09D8VbPiQcvBiDi9cj4nMtm9CZ8HraQzhGeNkZJyMCF1Ok8w/exec'; // Replace with your deployed Web App URL
+let extractedText = "";
 
-    window.onload = function () {
-      fetch(scriptURL)
-        .then(response => response.json())
-        .then(data => data.forEach(updateTable))
-        .catch(error => console.error("Fetch error:", error));
-    };
+window.onload = function () {
+  fetch(scriptURL)
+    .then(res => res.json())
+    .then(data => data.forEach(updateTable))
+    .catch(err => console.error("Fetch error:", err));
+};
 
-    function addEntry() {
-      const row = {
-        date: document.getElementById('date').value,
-        ins: document.getElementById('ins').value,
-        identifier: document.getElementById('identifier').value,
-        transaction: document.getElementById('transaction').value,
-        currency: document.getElementById('currency').value,
-        amount: parseFloat(document.getElementById('amount').value),
-        bank: document.getElementById('bank').value,
-        from: document.getElementById('from').value,
-        remarks: document.getElementById('remarks').value
-      };
+function addEntry() {
+  const row = {
+    date: document.getElementById('date').value,
+    ins: document.getElementById('ins').value,
+    identifier: document.getElementById('identifier').value,
+    transaction: document.getElementById('transaction').value,
+    currency: document.getElementById('currency').value,
+    amount: parseFloat(document.getElementById('amount').value),
+    bank: document.getElementById('bank').value,
+    from: document.getElementById('from').value,
+    remarks: document.getElementById('remarks').value
+  };
 
-      fetch(scriptURL, {
-        method: 'POST',
-        body: JSON.stringify(row)
-      })
-      .then(response => {
-        if (response.ok) {
-          alert("✅ Data Saved Successfully!");
-          updateTable(row);
-          document.getElementById("entryForm").reset();
-        } else {
-          alert("❌ Failed to save data.");
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert("❌ Error saving data.");
+  fetch(scriptURL, {
+    method: 'POST',
+    body: JSON.stringify(row)
+  })
+  .then(response => {
+    if (response.ok) {
+      alert("✅ Data Saved!");
+      updateTable(row);
+      document.getElementById("entryForm").reset();
+    } else {
+      alert("❌ Failed to save!");
+    }
+  })
+  .catch(err => alert("❌ Error saving data."));
+}
+
+function updateTable(row) {
+  const table = document.querySelector("#dataTable tbody");
+  const newRow = table.insertRow();
+  newRow.innerHTML = `
+    <td>${row["Date"] || row.date || ""}</td>
+    <td>${row["Ins#"] || row.ins || ""}</td>
+    <td>${row["Identifier"] || row.identifier || ""}</td>
+    <td>${row["Transaction"] || row.transaction || ""}</td>
+    <td>${row["Currency"] || row.currency || ""}</td>
+    <td>${row["Amount"] || row.amount || ""}</td>
+    <td>${row["Bank"] || row.bank || ""}</td>
+    <td>${row["From"] || row.from || ""}</td>
+    <td>${row["Remarks"] || row.remarks || ""}</td>
+    <td>${row["File URL"] ? `<a href="${row["File URL"]}" target="_blank">View</a>` : ''}</td>
+  `;
+}
+
+function readImage() {
+  const file = document.getElementById('fileInput').files[0];
+  if (file) {
+    Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+      .then(({ data: { text } }) => {
+        extractedText = text;
+        document.getElementById('ocrText').textContent = extractedText;
       });
-    }
+  }
+}
 
-    function updateTable(row) {
-      const table = document.querySelector("#dataTable tbody");
-      const newRow = table.insertRow();
-      newRow.innerHTML = `
-        <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
-        <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
-        <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
-        <td>${row.fileUrl || ''}</td>`;
-    }
+function mapTextToForm(sourceText = extractedText) {
+  if (!sourceText) return alert("No text to parse.");
 
-    function readImage() {
-      const file = document.getElementById('fileInput').files[0];
-      if (file) {
-        Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
-          .then(({ data: { text } }) => {
-            extractedText = text;
-            document.getElementById('ocrText').textContent = extractedText;
-          });
+  const lines = sourceText.split("\n");
+  lines.forEach(line => {
+    line = line.trim();
+
+    if (line.match(/date/i)) {
+      const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
+      if (dateMatch) {
+        const parts = dateMatch[0].split(/[\/\-.]/);
+        if (parts[2].length === 4) {
+          document.getElementById('date').value = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
       }
     }
 
-    function mapTextToForm(sourceText = extractedText) {
-      if (!sourceText) return alert("No OCR text detected.");
-
-      const lines = sourceText.split("\n");
-      lines.forEach(line => {
-        line = line.trim();
-
-        if (line.match(/date/i)) {
-          const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
-          if (dateMatch) {
-            const parts = dateMatch[0].split(/[\/\-.]/);
-            if (parts[2].length === 4) {
-              document.getElementById('date').value =
-                `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            }
-          }
-        }
-
-        if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
-          const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
-          if (amtMatch) document.getElementById('amount').value = amtMatch[0];
-        }
-
-        if (line.match(/pkr/i)) document.getElementById('currency').value = "PKR";
-        if (line.match(/aed/i)) document.getElementById('currency').value = "AED";
-
-        if (line.toLowerCase().includes("from")) {
-          const fromText = line.split(":")[1] || line.split(" ")[1];
-          if (fromText) document.getElementById('from').value = fromText.trim();
-        }
-      });
-
-      alert("Auto-filled from image text. Please verify fields.");
+    if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
+      const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
+      if (amtMatch) document.getElementById('amount').value = amtMatch[0];
     }
 
-    function mapManualTextToForm() {
-      const manualText = document.getElementById('manualText').value;
-      if (!manualText) return alert("Please paste receipt text.");
-      mapTextToForm(manualText);
+    if (line.match(/pkr/i)) document.getElementById('currency').value = "PKR";
+    if (line.match(/aed/i)) document.getElementById('currency').value = "AED";
+
+    if (line.toLowerCase().includes("from")) {
+      const fromText = line.split(":")[1] || line.split(" ")[1];
+      if (fromText) document.getElementById('from').value = fromText.trim();
     }
-  </script>
+  });
+
+  alert("Auto-filled from OCR. Please verify.");
+}
+
+function mapManualTextToForm() {
+  const manualText = document.getElementById('manualText').value;
+  if (!manualText) return alert("Paste receipt text first.");
+  mapTextToForm(manualText);
+}
+</script>
 
 </body>
 </html>
