@@ -2,23 +2,96 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Entry</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Entry Form</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    input, select, button { margin: 6px 0; padding: 10px; width: 100%; max-width: 400px; display: block; }
-    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 6px; }
-    table { margin-top: 20px; width: 100%; max-width: 100%; overflow-x: auto; }
-    th { background: #eaeaea; }
-    h2, h3 { color: #333; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2, h3 {
+      color: #333;
+    }
+
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .success {
+      color: green;
+      font-weight: bold;
+      margin-top: 10px;
+      display: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      input, select, button {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <h2>Payment Entry</h2>
-
+  <h2>Payment Entry Form</h2>
   <form id="entryForm">
-    <label>Date: <input type="date" id="date" required></label>
+    <label>Date:<input type="date" id="date" required></label>
     <label>Ins#: <input type="text" id="ins"></label>
     <label>Identifier: <input type="text" id="identifier"></label>
     <label>Transaction: <input type="text" id="transaction"></label>
@@ -53,79 +126,99 @@
     <label>Remarks: <input type="text" id="remarks"></label>
 
     <button type="button" onclick="addEntry()">Save Entry</button>
+    <button type="button" onclick="exportToExcel()">Export to Excel</button>
+    <div class="success" id="successMsg">✅ Entry saved successfully!</div>
   </form>
 
-  <h3>Session Preview</h3>
-  <table id="previewTable">
+  <h3>Saved Entries (Live View from Google Sheet)</h3>
+  <table id="dataTable">
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Ins#</th>
-        <th>Identifier</th>
-        <th>Transaction</th>
-        <th>Currency</th>
-        <th>Amount</th>
-        <th>Bank</th>
-        <th>From</th>
-        <th>Remarks</th>
+        <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th><th>Currency</th>
+        <th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
   <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbzRbyCCUUJYZBhbBcUTvy6tBM-oWwmoGS46eCrQ8YVxb1PH_4AK8XU7d5EB-rwnCoCl1Q/exec';
-    let sessionEntries = [];
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyzzEMf95es5AQF56p8pYJAF56WzTuoPcweBRvSYMTxffAVGI8KvouUjVNJ70GsALJ-pw/exec';
+    let data = [];
+
+    window.onload = function () {
+      fetchData();
+    };
+
+    function fetchData() {
+      fetch(scriptURL)
+        .then(response => response.json())
+        .then(json => {
+          data = json;
+          updateTable();
+        })
+        .catch(err => alert("❌ Failed to load data. Please check permissions."));
+    }
 
     function addEntry() {
       const row = {
-        date: document.getElementById('date').value,
-        ins: document.getElementById('ins').value,
-        identifier: document.getElementById('identifier').value,
-        transaction: document.getElementById('transaction').value,
-        currency: document.getElementById('currency').value,
-        amount: parseFloat(document.getElementById('amount').value),
-        bank: document.getElementById('bank').value,
-        from: document.getElementById('from').value,
-        remarks: document.getElementById('remarks').value
+        DATE: document.getElementById('date').value,
+        INS: document.getElementById('ins').value,
+        IDENTIFIER: document.getElementById('identifier').value,
+        TRANSACTION: document.getElementById('transaction').value,
+        CURRENCY: document.getElementById('currency').value,
+        AMOUNT: parseFloat(document.getElementById('amount').value),
+        BANK: document.getElementById('bank').value,
+        FROM: document.getElementById('from').value,
+        REMARKS: document.getElementById('remarks').value
       };
 
       fetch(scriptURL, {
         method: 'POST',
-        body: JSON.stringify(row),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        body: JSON.stringify(row)
       })
+      .then(res => res.text())
       .then(() => {
-        alert("✅ Entry saved");
-        sessionEntries.push(row);
-        updatePreviewTable();
         document.getElementById("entryForm").reset();
+        showSuccess();
+        fetchData(); // refresh table
       })
-      .catch(err => {
-        alert("❌ Error saving entry: " + err);
+      .catch(() => alert("❌ Submission failed. Try again."));
+    }
+
+    function updateTable() {
+      const table = document.querySelector("#dataTable tbody");
+      table.innerHTML = "";
+      data.forEach(entry => {
+        const row = table.insertRow();
+        row.innerHTML = `
+          <td>${formatDate(entry.DATE)}</td><td>${entry.INS}</td><td>${entry.IDENTIFIER}</td>
+          <td>${entry.TRANSACTION}</td><td>${entry.CURRENCY}</td><td>${entry.AMOUNT}</td>
+          <td>${entry.BANK}</td><td>${entry.FROM}</td><td>${entry.REMARKS}</td>
+        `;
       });
     }
 
-    function updatePreviewTable() {
-      const tableBody = document.querySelector("#previewTable tbody");
-      tableBody.innerHTML = "";
-      sessionEntries.forEach(entry => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${entry.date}</td>
-          <td>${entry.ins}</td>
-          <td>${entry.identifier}</td>
-          <td>${entry.transaction}</td>
-          <td>${entry.currency}</td>
-          <td>${entry.amount}</td>
-          <td>${entry.bank}</td>
-          <td>${entry.from}</td>
-          <td>${entry.remarks}</td>
-        `;
-        tableBody.appendChild(tr);
-      });
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      if (isNaN(date)) return dateStr;
+      const optionsDate = { day: '2-digit', month: 'short', year: 'numeric' };
+      const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+      const formattedDate = date.toLocaleDateString('en-GB', optionsDate);
+      const formattedTime = date.toLocaleTimeString('en-GB', optionsTime);
+      return `${formattedDate} - ${formattedTime}`;
+    }
+
+    function exportToExcel() {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Payments");
+      XLSX.writeFile(wb, "Payments_Export.xlsx");
+    }
+
+    function showSuccess() {
+      const msg = document.getElementById("successMsg");
+      msg.style.display = "block";
+      setTimeout(() => msg.style.display = "none", 3000);
     }
   </script>
 
