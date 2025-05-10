@@ -1,140 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Payment Entry</title>
+  <meta charset="UTF-8">
+  <title>Payment Entry Form</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; }
-    .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, select { width: 100%; padding: 8px; margin: 5px 0 10px; }
-    button { margin: 5px; padding: 10px 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; }
-    .btn-primary { background: #007BFF; color: white; }
-    .btn-secondary { background: #6C757D; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 8px; border: 1px solid #ccc; }
-    th { background: #eee; }
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
+    input, select, textarea { margin: 5px; padding: 5px; }
+    button { margin-top: 10px; padding: 10px 20px; }
+    #ocrText { margin-top: 10px; font-size: 14px; color: green; white-space: pre-line; }
   </style>
 </head>
 <body>
-<div class="container">
+
   <h2>Payment Entry</h2>
+
   <form id="entryForm">
-    <label>Date: <input type="date" id="date" required /></label>
-    <label>Ins#: <input type="text" id="ins" /></label>
-    <label>Identifier: <input type="text" id="identifier" /></label>
-    <label>Transaction: <input type="text" id="transaction" /></label>
+    <label>Date: <input type="date" id="date" required></label><br>
+    <label>Ins#: <input type="text" id="ins"></label><br>
+    <label>Identifier: <input type="text" id="identifier"></label><br>
+    <label>Transaction: <input type="text" id="transaction"></label><br>
+
     <label>Currency:
       <select id="currency" required>
         <option value="PKR">PKR</option>
         <option value="AED">AED</option>
       </select>
-    </label>
-    <label>Amount: <input type="number" id="amount" required /></label>
+    </label><br>
+
+    <label>Amount: <input type="number" id="amount" required></label><br>
+
     <label>Bank:
       <select id="bank" required>
         <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
         <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
         <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
         <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+        <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
         <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
         <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
         <option value="PAK - Cash Received">PAK - Cash Received</option>
         <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
         <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+        <option value="DXB - Cash Received">DXB - Cash Received</option>
         <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
       </select>
-    </label>
-    <label>From: <input type="text" id="from" /></label>
-    <label>Remarks: <input type="text" id="remarks" /></label>
+    </label><br>
 
-    <div>
-      <button type="button" class="btn-primary" onclick="submitEntry()">Save</button>
-      <button type="button" class="btn-secondary" onclick="resetForm()">Cancel</button>
-      <button type="button" class="btn-primary" onclick="exportToExcel()">Export to Excel</button>
-    </div>
+    <label>From: <input type="text" id="from"></label><br>
+    <label>Remarks: <input type="text" id="remarks"></label><br>
+
+    <button type="button" onclick="addEntry()">Save Entry</button>
   </form>
 
+  <h3>Upload Transaction Image (Auto-Read)</h3>
+  <input type="file" id="fileInput" accept="image/*" onchange="readImage()" />
+  <div id="ocrText"></div>
+  <button type="button" onclick="mapTextToForm()">Auto Fill Form (From Image)</button>
+
+  <h3>Or Paste Transaction Text</h3>
+  <textarea id="manualText" rows="10" cols="50" placeholder="Paste receipt text here..."></textarea><br>
+  <button type="button" onclick="mapManualTextToForm()">Auto Fill Form (From Pasted Text)</button>
+
+  <h3>Saved Entries</h3>
   <table id="dataTable">
     <thead>
       <tr>
-        <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
-        <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th>
+        <th>date</th><th>ins</th><th>identifier</th><th>transaction</th><th>currency</th>
+        <th>amount</th><th>bank</th><th>from</th><th>remarks</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
-</div>
 
-<script>
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyVHVCOXByY15LPHVfnSyBB8AlSTnKHqIcKXGSzW0LWgYVuunUNVVUqBMMgn2iocbb5qQ/exec'; // 🔁 Replace with your deployed Apps Script URL
+  <script>
+    let extractedText = "";
 
-window.onload = () => {
-  fetch(scriptURL)
-    .then(res => res.json())
-    .then(data => {
-      document.querySelector("#dataTable tbody").innerHTML = "";
-      data.forEach(row => appendRow(row));
-    });
-};
+    function addEntry() {
+      const row = {
+        date: document.getElementById('date').value,
+        ins: document.getElementById('ins').value,
+        identifier: document.getElementById('identifier').value,
+        transaction: document.getElementById('transaction').value,
+        currency: document.getElementById('currency').value,
+        amount: parseFloat(document.getElementById('amount').value),
+        bank: document.getElementById('bank').value,
+        from: document.getElementById('from').value,
+        remarks: document.getElementById('remarks').value
+      };
 
-function getFormData() {
-  return {
-    date: formatDateReadable(document.getElementById("date").value),
-    ins: document.getElementById("ins").value,
-    identifier: document.getElementById("identifier").value,
-    transaction: document.getElementById("transaction").value,
-    currency: document.getElementById("currency").value,
-    amount: document.getElementById("amount").value,
-    bank: document.getElementById("bank").value,
-    from: document.getElementById("from").value,
-    remarks: document.getElementById("remarks").value,
-    action: "add"
-  };
-}
+      fetch('https://script.google.com/macros/s/AKfycbyy7r0jCxc3Huvr-bxuznjkOn9d_lkdOGOPGff2LegBlsT6FPBiULNOpYHwfSvJeslH5g/exec', {
+        method: 'POST',
+        body: JSON.stringify(row)
+      })
+      .then(response => {
+        if (response.ok) {
+          alert("✅ Entry Saved!");
+          document.getElementById("entryForm").reset();
+          updateTable(row);
+        } else {
+          alert("❌ Save Failed");
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert("❌ Network or Script Error");
+      });
+    }
 
-function submitEntry() {
-  const row = getFormData();
-  fetch(scriptURL, {
-    method: "POST",
-    body: JSON.stringify(row)
-  }).then(() => location.reload());
-}
+    function updateTable(row) {
+      const table = document.querySelector("#dataTable tbody");
+      const newRow = table.insertRow();
+      newRow.innerHTML = `
+        <td>${row.date}</td><td>${row.ins}</td><td>${row.identifier}</td>
+        <td>${row.transaction}</td><td>${row.currency}</td><td>${row.amount}</td>
+        <td>${row.bank}</td><td>${row.from}</td><td>${row.remarks}</td>
+      `;
+    }
 
-function resetForm() {
-  document.getElementById("entryForm").reset();
-}
+    function readImage() {
+      const file = document.getElementById('fileInput').files[0];
+      if (file) {
+        Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+        .then(({ data: { text } }) => {
+          extractedText = text;
+          document.getElementById('ocrText').textContent = extractedText;
+        });
+      }
+    }
 
-function appendRow(row) {
-  const tbody = document.querySelector("#dataTable tbody");
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${row["Date"]}</td>
-    <td>${row["Ins#"]}</td>
-    <td>${row["Identifier"]}</td>
-    <td>${row["Transaction"]}</td>
-    <td>${row["Currency"]}</td>
-    <td>${row["Amount"]}</td>
-    <td>${row["Bank"]}</td>
-    <td>${row["From"]}</td>
-    <td>${row["Remarks"]}</td>
-  `;
-  tbody.appendChild(tr);
-}
+    function mapTextToForm(sourceText = extractedText) {
+      if (!sourceText) {
+        alert("No text detected!");
+        return;
+      }
 
-function exportToExcel() {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(document.getElementById("dataTable"));
-  XLSX.utils.book_append_sheet(wb, ws, "Payments");
-  XLSX.writeFile(wb, "payment_entries.xlsx");
-}
+      const lines = sourceText.split("\n");
+      lines.forEach(line => {
+        line = line.trim();
 
-// ✅ Format date to "DD MMM YYYY"
-function formatDateReadable(dateStr) {
-  const d = new Date(dateStr);
-  const options = { day: '2-digit', month: 'short', year: 'numeric' };
-  return d.toLocaleDateString('en-GB', options).replace(/ /g, ' ');
-}
-</script>
+        if (line.match(/date/i)) {
+          const dateMatch = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/);
+          if (dateMatch) {
+            const parts = dateMatch[0].split(/[\/\-.]/);
+            let formattedDate = "";
+            if (parts[2].length === 4) { 
+              formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            }
+            document.getElementById('date').value = formattedDate;
+          }
+        }
+
+        if (line.toLowerCase().includes("amount") || line.toLowerCase().includes("amt")) {
+          const amtMatch = line.replace(/,/g, '').match(/\d+(\.\d+)?/);
+          if (amtMatch) {
+            document.getElementById('amount').value = amtMatch[0];
+          }
+        }
+
+        if (line.match(/pkr/i)) document.getElementById('currency').value = "PKR";
+        if (line.match(/aed/i)) document.getElementById('currency').value = "AED";
+
+        if (line.toLowerCase().includes("from")) {
+          const fromText = line.split(":")[1] || line.split(" ")[1];
+          if (fromText) {
+            document.getElementById('from').value = fromText.trim();
+          }
+        }
+      });
+
+      alert("Auto-filled. Please double-check.");
+    }
+
+    function mapManualTextToForm() {
+      const manualText = document.getElementById('manualText').value;
+      if (!manualText) {
+        alert("Paste text first!");
+        return;
+      }
+      mapTextToForm(manualText);
+    }
+
+    window.onload = function() {
+      fetch('https://script.google.com/macros/s/AKfycbyy7r0jCxc3Huvr-bxuznjkOn9d_lkdOGOPGff2LegBlsT6FPBiULNOpYHwfSvJeslH5g/exec')
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.querySelector("#dataTable tbody");
+          tableBody.innerHTML = "";
+
+          data.forEach(row => {
+            const newRow = tableBody.insertRow();
+            newRow.innerHTML = `
+              <td>${row["date"] || ''}</td>
+              <td>${row["ins"] || ''}</td>
+              <td>${row["identifier"] || ''}</td>
+              <td>${row["transaction"] || ''}</td>
+              <td>${row["currency"] || ''}</td>
+              <td>${row["amount"] || ''}</td>
+              <td>${row["bank"] || ''}</td>
+              <td>${row["from"] || ''}</td>
+              <td>${row["remarks"] || ''}</td>
+            `;
+          });
+        })
+        .catch(error => {
+          console.error('❌ Load Error:', error);
+        });
+    };
+  </script>
+
 </body>
 </html>
