@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payment Entry</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select { width: 100%; padding: 8px; margin: 5px 0 10px; }
+    button { margin: 5px; padding: 10px 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; }
+    .btn-primary { background: #007BFF; color: white; }
+    .btn-secondary { background: #6C757D; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 8px; border: 1px solid #ccc; }
+    th { background: #eee; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Payment Entry</h2>
+  <form id="entryForm">
+    <label>Date: <input type="date" id="date" required /></label>
+    <label>Ins#: <input type="text" id="ins" /></label>
+    <label>Identifier: <input type="text" id="identifier" /></label>
+    <label>Transaction: <input type="text" id="transaction" /></label>
+    <label>Currency:
+      <select id="currency" required>
+        <option value="PKR">PKR</option>
+        <option value="AED">AED</option>
+      </select>
+    </label>
+    <label>Amount: <input type="number" id="amount" required /></label>
+    <label>Bank:
+      <select id="bank" required>
+        <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
+        <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
+        <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
+        <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+        <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
+        <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
+        <option value="PAK - Cash Received">PAK - Cash Received</option>
+        <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
+        <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+        <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
+      </select>
+    </label>
+    <label>From: <input type="text" id="from" /></label>
+    <label>Remarks: <input type="text" id="remarks" /></label>
+
+    <div>
+      <button type="button" class="btn-primary" onclick="submitEntry()">Save</button>
+      <button type="button" class="btn-secondary" onclick="resetForm()">Cancel</button>
+      <button type="button" class="btn-primary" onclick="exportToExcel()">Export to Excel</button>
+    </div>
+  </form>
+
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Date</th><th>Ins#</th><th>Identifier</th><th>Transaction</th>
+        <th>Currency</th><th>Amount</th><th>Bank</th><th>From</th><th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyVHVCOXByY15LPHVfnSyBB8AlSTnKHqIcKXGSzW0LWgYVuunUNVVUqBMMgn2iocbb5qQ/exec'; // 🔁 Replace with your deployed Apps Script URL
+
+window.onload = () => {
+  fetch(scriptURL)
+    .then(res => res.json())
+    .then(data => {
+      document.querySelector("#dataTable tbody").innerHTML = "";
+      data.forEach(row => appendRow(row));
+    });
+};
+
+function getFormData() {
+  return {
+    date: formatDateReadable(document.getElementById("date").value),
+    ins: document.getElementById("ins").value,
+    identifier: document.getElementById("identifier").value,
+    transaction: document.getElementById("transaction").value,
+    currency: document.getElementById("currency").value,
+    amount: document.getElementById("amount").value,
+    bank: document.getElementById("bank").value,
+    from: document.getElementById("from").value,
+    remarks: document.getElementById("remarks").value,
+    action: "add"
+  };
+}
+
+function submitEntry() {
+  const row = getFormData();
+  fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify(row)
+  }).then(() => location.reload());
+}
+
+function resetForm() {
+  document.getElementById("entryForm").reset();
+}
+
+function appendRow(row) {
+  const tbody = document.querySelector("#dataTable tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${row["Date"]}</td>
+    <td>${row["Ins#"]}</td>
+    <td>${row["Identifier"]}</td>
+    <td>${row["Transaction"]}</td>
+    <td>${row["Currency"]}</td>
+    <td>${row["Amount"]}</td>
+    <td>${row["Bank"]}</td>
+    <td>${row["From"]}</td>
+    <td>${row["Remarks"]}</td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById("dataTable"));
+  XLSX.utils.book_append_sheet(wb, ws, "Payments");
+  XLSX.writeFile(wb, "payment_entries.xlsx");
+}
+
+// ✅ Format date to "DD MMM YYYY"
+function formatDateReadable(dateStr) {
+  const d = new Date(dateStr);
+  const options = { day: '2-digit', month: 'short', year: 'numeric' };
+  return d.toLocaleDateString('en-GB', options).replace(/ /g, ' ');
+}
+</script>
+</body>
+</html>
