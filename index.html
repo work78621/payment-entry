@@ -95,22 +95,23 @@
 
     <label>Amount: <input type="number" id="amount" required></label>
 
-    <label>Bank:
-      <select id="bank" required>
-        <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
-        <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
-        <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
-        <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
-        <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
-        <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
-        <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
-        <option value="PAK - Cash Received">PAK - Cash Received</option>
-        <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
-        <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
-        <option value="DXB - Cash Received">DXB - Cash Received</option>
-        <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
-      </select>
-    </label>
+ <label>Bank:
+  <select id="bank" required>
+    <option value="">-- Select Bank --</option> <!-- Blank option added -->
+    <option value="PAK - Mate Enterprise : Bank Alfalah - 6035">PAK - Mate Enterprise : Bank Alfalah - 6035</option>
+    <option value="DXB - AAA FD : ENBD">DXB - AAA FD : ENBD</option>
+    <option value="PAK - AAA Reels : Bank Alfalah - 0862">PAK - AAA Reels : Bank Alfalah - 0862</option>
+    <option value="Fair Deal Marketing - 0001 bank islam">Fair Deal Marketing - 0001 bank islam</option>
+    <option value="PAK - Saqib Anjum :">PAK - Saqib Anjum :</option>
+    <option value="DXB - Mate Enterprise : UBL - 6743">DXB - Mate Enterprise : UBL - 6743</option>
+    <option value="DXB - Pind Café : RAK">DXB - Pind Café : RAK</option>
+    <option value="PAK - Cash Received">PAK - Cash Received</option>
+    <option value="DXB - CEO : EIB">DXB - CEO : EIB</option>
+    <option value="DXB - Mate Enterprise : EIB - 8901">DXB - Mate Enterprise : EIB - 8901</option>
+    <option value="DXB - Cash Received">DXB - Cash Received</option>
+    <option value="PAK - Mate Enterprise : Bank Alfalah - 9289">PAK - Mate Enterprise : Bank Alfalah - 9289</option>
+  </select>
+</label>
 
     <label>From: <input type="text" id="from"></label>
     <label>Remarks: <input type="text" id="remarks"></label>
@@ -137,47 +138,53 @@
     let data = [];
 
     document.getElementById('entryForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+  e.preventDefault();
 
-      const fileInput = document.getElementById('paymentProof');
-      const file = fileInput.files[0];
-      if (!file) return alert("Please select a payment proof image.");
+  const fileInput = document.getElementById('paymentProof');
+  const file = fileInput.files[0];
+  const date = document.getElementById('date').value;
+  const bank = document.getElementById('bank').value;
 
-      const reader = new FileReader();
-      reader.onload = function () {
-        const base64Data = reader.result.split(',')[1];
-        const payload = {
-          date: document.getElementById('date').value,
-          ins: document.getElementById('ins').value,
-          identifier: document.getElementById('identifier').value,
-          transaction: document.getElementById('transaction').value,
-          currency: document.getElementById('currency').value,
-          amount: parseFloat(document.getElementById('amount').value),
-          bank: document.getElementById('bank').value,
-          from: document.getElementById('from').value,
-          remarks: document.getElementById('remarks').value,
-          filename: file.name,
-          mimeType: file.type,
-          fileData: base64Data
-        };
+  if (!date) return alert("❌ Date is required.");
+  if (!bank) return alert("❌ Please select a bank.");
+  if (!file) return alert("❌ Upload a payment proof image.");
 
-        fetch(scriptURL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(result => {
-          console.log("Result received:", result);
-          if (result.status === 'success') {
-            showSuccess();
-            fetchData(); // Refresh table
-          } else {
-            alert('Upload failed: ' + result.message);
-          }
-        });
-      };
-      reader.readAsDataURL(file);
+  const reader = new FileReader();
+  reader.onload = function () {
+    const base64Data = reader.result.split(',')[1];
+    const payload = {
+      date,
+      ins: document.getElementById('ins').value,
+      identifier: document.getElementById('identifier').value,
+      transaction: document.getElementById('transaction').value,
+      currency: document.getElementById('currency').value,
+      amount: parseFloat(document.getElementById('amount').value),
+      bank,
+      from: document.getElementById('from').value,
+      remarks: document.getElementById('remarks').value,
+      filename: file.name,
+      mimeType: file.type,
+      fileData: base64Data
+    };
+
+    fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(result => {
+      if (result.status === 'success') {
+        alert("✅ Entry and file uploaded successfully!");
+        document.getElementById("entryForm").reset();
+        fetchData();
+      } else {
+        alert('❌ Upload failed: ' + result.message);
+      }
     });
+  };
+  reader.readAsDataURL(file);
+});
+
 
 function fetchData() {
   fetch(scriptURL)
